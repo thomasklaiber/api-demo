@@ -1,0 +1,161 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>REST API Demo – Dashboard</title>
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+      *{box-sizing:border-box}
+      :root{--bg:#0b0c10;--card:#15171e;--line:#2a2e3a;--ink:#eaeaea;--link:#61dafb}
+      body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,sans-serif;line-height:1.45;margin:0;background:var(--bg);color:var(--ink)}
+      a{color:var(--link)}
+      main{max-width:1100px;margin:0 auto;padding:24px}
+      h1{margin:0 0 16px 0}
+      .cards{display:grid;grid-template-columns:1fr;gap:16px}
+      @media (min-width: 900px){.cards{grid-template-columns:1fr 1fr}}
+      .card{background:var(--card);border:1px solid #232632;border-radius:16px;padding:16px;box-shadow:0 2px 18px rgba(0,0,0,.15)}
+      table{width:100%;border-collapse:collapse;margin-top:8px}
+      th,td{border-bottom:1px solid var(--line);padding:8px 6px;text-align:left;font-size:14px}
+      th{font-weight:600}
+      .controls{display:flex;gap:8px;align-items:center;margin:8px 0 16px 0}
+      input[type="text"]{background:#0f1117;border:1px solid var(--line);border-radius:10px;color:var(--ink);padding:8px 10px;min-width:280px}
+      button{background:#1f6feb;border:0;color:white;border-radius:10px;padding:8px 12px;cursor:pointer}
+      .small{opacity:.8;font-size:12px}
+      .bad{color:#ff8888}
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>API Dashboard</h1>
+      <div class="controls">
+        <label for="api">API Base URL:</label>
+        <input id="api" type="text" placeholder="http://localhost:3000" />
+        <button id="apply">Verbinden</button>
+        <span id="status" class="small"></span>
+      </div>
+
+      <section class="cards">
+        <div class="card">
+          <h2>Overview</h2>
+          <div id="overview">
+            <p><strong>Started:</strong> <span id="startedAt">-</span></p>
+            <p><strong>Uptime:</strong> <span id="uptimeSec">-</span> s</p>
+            <p><strong>Total Requests:</strong> <span id="totalRequests">-</span></p>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>Requests by Route</h2>
+          <canvas id="routeChart" height="140"></canvas>
+          <table id="routeTable"></table>
+        </div>
+
+        <div class="card">
+          <h2>Recent Requests</h2>
+          <table id="recentTable"></table>
+        </div>
+      </section>
+    </main>
+
+    <script>
+      const $ = (sel) => document.querySelector(sel);
+
+      function getBaseUrl() {
+        const p = new URLSearchParams(location.search);
+        return (p.get('api') || $('#api').value || 'http://localhost:3000').replace(/\/+$/,''); // trim trailing slash
+      }
+
+      // UI state
+      $('#api').value = new URLSearchParams(location.search).get('api') || 'http://localhost:3000';
+      let timer = null;
+      let routeChart = null;
+
+      async function fetchStatsOnce() {
+        const base = getBaseUrl();
+        try {
+          const res = await fetch(base + '/api/_stats', { cache: 'no-store' });
+          if (!res.ok) throw new Error('HTTP ' + res.status);
+          const data = await res.json();
+          render(data);
+          $('#status').textContent = 'verbunden mit ' + base;
+          $('#status').classList.remove('bad');
+        } catch (err) {
+          $('#status').textContent = 'Fehler: ' + (err?.message || err);
+          $('#status').classList.add('bad');
+          // clear UI partially
+        }
+      }
+
+      function startPolling() {
+        if (timer) clearInterval(timer);
+        fetchStatsOnce();
+        timer = setInterval(fetchStatsOnce, 2000);
+      }
+
+      function render(data) {
+        // overview
+        $('#startedAt').textContent = data.startedAt || '-';
+        $('#uptimeSec').textContent = data.uptimeSec ?? '-';
+        $('#totalRequests').textContent = data.totalRequests ?? '-';
+
+        // routes table + chart
+        const rt = $('#routeTable');
+        rt.innerHTML = '';
+        const header = rt.insertRow();
+        ['Route','Count','Avg ms','Statuses'].forEach(h => {
+          const th = document.createElement('th'); th.textContent = h; header.appendChild(th);
+        });
+        const labels = [];
+        const counts = [];
+        (data.routes || []).forEach(r => {
+          const row = rt.insertRow();
+          row.insertCell().textContent = r.route;
+          row.insertCell().textContent = r.count;
+          row.insertCell().textContent = r.avgMs;
+          row.insertCell().textContent = Object.entries(r.statuses || {}).map(([k,v]) => k+':'+v).join(', ');
+          labels.push(r.route);
+          counts.push(r.count);
+        });
+
+        const ctx = document.getElementById('routeChart').getContext('2d');
+        if (routeChart) routeChart.destroy();
+        routeChart = new Chart(ctx, {
+          type: 'bar',
+          data: { labels, datasets: [{ label: 'Requests', data: counts }] },
+          options: {
+            responsive: true,
+            plugins: { legend: { display: false } },
+            scales: { x: { ticks: { autoSkip: false } } }
+          }
+        });
+
+        // recent
+        const rct = $('#recentTable');
+        rct.innerHTML = '';
+        const h2 = rct.insertRow();
+        ['Time','Method','Path','Status','ms'].forEach(h => { const th=document.createElement('th'); th.textContent=h; h2.appendChild(th); });
+        (data.recent || []).forEach(item => {
+          const row = rct.insertRow();
+          row.insertCell().textContent = new Date(item.ts).toLocaleTimeString();
+          row.insertCell().textContent = item.method;
+          row.insertCell().textContent = item.path;
+          row.insertCell().textContent = item.status;
+          row.insertCell().textContent = item.ms;
+        });
+      }
+
+      $('#apply').addEventListener('click', () => {
+        const api = $('#api').value || 'http://localhost:3000';
+        const url = new URL(location.href);
+        url.searchParams.set('api', api);
+        history.replaceState(null, '', url.toString());
+        startPolling();
+      });
+
+      // auto start
+      startPolling();
+    </script>
+  </body>
+</html>
