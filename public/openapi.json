@@ -7,8 +7,8 @@
   },
   "servers": [
     {
-      "url": "http://localhost:3000",
-      "description": "Local dev"
+      "url": "https://api-demo-l4rk.onrender.com",
+      "description": "Demo"
     }
   ],
   "components": {

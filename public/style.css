@@ -1,0 +1,18 @@
+*{box-sizing:border-box}
+body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,sans-serif;background:#0b0c10;color:#eaeaea;line-height:1.5}
+a{color:#61dafb}
+main.container{max-width:700px;margin:0 auto;padding:40px 24px;text-align:center}
+h1{font-size:2.2rem;margin-bottom:0.5em}
+ul{list-style:none;padding:0}
+li{margin:0.4em 0}
+.btn{
+  display:inline-block;
+  margin-top:1.2em;
+  padding:8px 16px;
+  background:#1f6feb;
+  color:#fff;
+  border-radius:8px;
+  text-decoration:none;
+}
+.btn:hover{background:#388bfd}
+.small{font-size:0.875rem;opacity:.8;margin-top:1.2em}
