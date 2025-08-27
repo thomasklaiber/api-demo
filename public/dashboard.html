@@ -70,7 +70,18 @@
       // UI state
       $('#api').value = new URLSearchParams(location.search).get('api') || 'http://localhost:3000';
       let timer = null;
-      let routeChart = null;
+      const routeChart = new Chart(
+        document.getElementById('routeChart').getContext('2d'),
+        {
+          type: 'bar',
+          data: { labels: [], datasets: [{ label: 'Requests', data: [] }] },
+          options: {
+            responsive: true,
+            plugins: { legend: { display: false } },
+            scales: { x: { ticks: { autoSkip: false } } }
+          }
+        }
+      );
 
       async function fetchStatsOnce() {
         const base = getBaseUrl();
@@ -119,17 +130,9 @@
           counts.push(r.count);
         });
 
-        const ctx = document.getElementById('routeChart').getContext('2d');
-        if (routeChart) routeChart.destroy();
-        routeChart = new Chart(ctx, {
-          type: 'bar',
-          data: { labels, datasets: [{ label: 'Requests', data: counts }] },
-          options: {
-            responsive: true,
-            plugins: { legend: { display: false } },
-            scales: { x: { ticks: { autoSkip: false } } }
-          }
-        });
+        routeChart.data.labels = labels;
+        routeChart.data.datasets[0].data = counts;
+        routeChart.update();
 
         // recent
         const rct = $('#recentTable');
