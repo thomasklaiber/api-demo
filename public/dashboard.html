@@ -33,6 +33,7 @@
         <label for="api">API Base URL:</label>
         <input id="api" type="text" placeholder="http://localhost:3000" />
         <button id="apply">Verbinden</button>
+        <label><input id="hideStats" type="checkbox" checked /> /stats ausblenden</label>
         <span id="status" class="small"></span>
       </div>
 
@@ -70,6 +71,7 @@
       // UI state
       $('#api').value = new URLSearchParams(location.search).get('api') || 'http://localhost:3000';
       let timer = null;
+      let lastData = null;
       const routeChart = new Chart(
         document.getElementById('routeChart').getContext('2d'),
         {
@@ -89,7 +91,8 @@
           const res = await fetch(base + '/api/_stats', { cache: 'no-store' });
           if (!res.ok) throw new Error('HTTP ' + res.status);
           const data = await res.json();
-          render(data);
+          lastData = data;
+          render(lastData);
           $('#status').textContent = 'verbunden mit ' + base;
           $('#status').classList.remove('bad');
         } catch (err) {
@@ -106,10 +109,21 @@
       }
 
       function render(data) {
+        const hideStats = $('#hideStats').checked;
+
         // overview
         $('#startedAt').textContent = data.startedAt || '-';
         $('#uptimeSec').textContent = data.uptimeSec ?? '-';
-        $('#totalRequests').textContent = data.totalRequests ?? '-';
+        let routes = data.routes || [];
+        let statsCount = 0;
+        if (hideStats) {
+          routes = routes.filter(r => {
+            if (r.route.includes('/_stats')) { statsCount = r.count; return false; }
+            return true;
+          });
+        }
+        const total = hideStats ? (data.totalRequests - statsCount) : data.totalRequests;
+        $('#totalRequests').textContent = total ?? '-';
 
         // routes table + chart
         const rt = $('#routeTable');
@@ -120,7 +134,7 @@
         });
         const labels = [];
         const counts = [];
-        (data.routes || []).forEach(r => {
+        routes.forEach(r => {
           const row = rt.insertRow();
           row.insertCell().textContent = r.route;
           row.insertCell().textContent = r.count;
@@ -135,11 +149,13 @@
         routeChart.update();
 
         // recent
+        let recent = data.recent || [];
+        if (hideStats) recent = recent.filter(item => !item.path.includes('/_stats'));
         const rct = $('#recentTable');
         rct.innerHTML = '';
         const h2 = rct.insertRow();
         ['Time','Method','Path','Status','ms'].forEach(h => { const th=document.createElement('th'); th.textContent=h; h2.appendChild(th); });
-        (data.recent || []).forEach(item => {
+        recent.forEach(item => {
           const row = rct.insertRow();
           row.insertCell().textContent = new Date(item.ts).toLocaleTimeString();
           row.insertCell().textContent = item.method;
@@ -155,6 +171,10 @@
         url.searchParams.set('api', api);
         history.replaceState(null, '', url.toString());
         startPolling();
+      });
+
+      $('#hideStats').addEventListener('change', () => {
+        if (lastData) render(lastData);
       });
 
       // auto start
