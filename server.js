@@ -140,13 +140,19 @@ app.delete("/api/users/:id", apiKeyRequired, (req, res) => {
 // --- TODOS CRUD
 app.get("/api/todos", (req, res) => {
   const { userId, completed } = req.query;
-  let list = Array.from(todos.values());
-  if (userId) list = list.filter(t => t.userId === userId);
-  if (completed !== undefined) {
-    if (completed === "true") list = list.filter(t => t.completed === true);
-    else if (completed === "false") list = list.filter(t => t.completed === false);
+  const filtered = [];
+  const completedFilter =
+    completed !== undefined ? completed === "true" : null;
+  for (const todo of todos.values()) {
+    if (userId && todo.userId !== userId) continue;
+    if (
+      completedFilter !== null &&
+      todo.completed !== completedFilter
+    )
+      continue;
+    filtered.push(todo);
   }
-  res.json(list);
+  res.json(filtered);
 });
 
 app.post("/api/todos", apiKeyRequired, (req, res) => {
