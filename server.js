@@ -15,16 +15,19 @@ app.use(express.static("public"));
 let nextId = 1;
 const makeId = () => String(nextId++);
 
-const users = [
-  { id: makeId(), name: "Alice", email: "alice@example.com" },
-  { id: makeId(), name: "Bob", email: "bob@example.com" },
-];
+// use Maps keyed by id for quick lookup
+const users = new Map();
+const alice = { id: makeId(), name: "Alice", email: "alice@example.com" };
+const bob = { id: makeId(), name: "Bob", email: "bob@example.com" };
+users.set(alice.id, alice);
+users.set(bob.id, bob);
 
-const todos = [
-  { id: makeId(), userId: users[0].id, title: "Buy coffee", completed: false },
-  { id: makeId(), userId: users[0].id, title: "Edit wedding photos", completed: true },
-  { id: makeId(), userId: users[1].id, title: "Prepare client proposal", completed: false },
-];
+const todos = new Map();
+[
+  { id: makeId(), userId: alice.id, title: "Buy coffee", completed: false },
+  { id: makeId(), userId: alice.id, title: "Edit wedding photos", completed: true },
+  { id: makeId(), userId: bob.id, title: "Prepare client proposal", completed: false },
+].forEach(t => todos.set(t.id, t));
 
 // --- Simple metrics middleware
 const metrics = {
@@ -88,28 +91,29 @@ app.get("/api/health", (_req, res) => {
 // --- USERS CRUD
 app.get("/api/users", (req, res) => {
   const q = (req.query.q || "").toLowerCase();
+  let list = Array.from(users.values());
   if (q) {
-    return res.json(users.filter(u => u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q)));
+    list = list.filter(u => u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q));
   }
-  res.json(users);
+  res.json(list);
 });
 
 app.post("/api/users", apiKeyRequired, (req, res) => {
   const { name, email } = req.body || {};
   if (!name || !email) return res.status(400).json({ error: "name and email are required" });
   const user = { id: makeId(), name, email };
-  users.push(user);
+  users.set(user.id, user);
   res.status(201).json(user);
 });
 
 app.get("/api/users/:id", (req, res) => {
-  const user = users.find(u => u.id === req.params.id);
+  const user = users.get(req.params.id);
   if (!user) return res.status(404).json({ error: "user not found" });
   res.json(user);
 });
 
 app.patch("/api/users/:id", apiKeyRequired, (req, res) => {
-  const user = users.find(u => u.id === req.params.id);
+  const user = users.get(req.params.id);
   if (!user) return res.status(404).json({ error: "user not found" });
   const { name, email } = req.body || {};
   if (name !== undefined) user.name = name;
@@ -118,12 +122,12 @@ app.patch("/api/users/:id", apiKeyRequired, (req, res) => {
 });
 
 app.delete("/api/users/:id", apiKeyRequired, (req, res) => {
-  const idx = users.findIndex(u => u.id === req.params.id);
-  if (idx === -1) return res.status(404).json({ error: "user not found" });
-  const [removed] = users.splice(idx, 1);
+  const user = users.get(req.params.id);
+  if (!user) return res.status(404).json({ error: "user not found" });
+  users.delete(req.params.id);
   // also cascade delete user's todos
-  for (let i = todos.length - 1; i >= 0; i--) {
-    if (todos[i].userId === removed.id) todos.splice(i, 1);
+  for (const [id, todo] of todos) {
+    if (todo.userId === req.params.id) todos.delete(id);
   }
   res.json({ ok: true });
 });
@@ -131,7 +135,7 @@ app.delete("/api/users/:id", apiKeyRequired, (req, res) => {
 // --- TODOS CRUD
 app.get("/api/todos", (req, res) => {
   const { userId, completed } = req.query;
-  let list = [...todos];
+  let list = Array.from(todos.values());
   if (userId) list = list.filter(t => t.userId === userId);
   if (completed !== undefined) {
     if (completed === "true") list = list.filter(t => t.completed === true);
@@ -143,35 +147,35 @@ app.get("/api/todos", (req, res) => {
 app.post("/api/todos", apiKeyRequired, (req, res) => {
   const { userId, title, completed = false } = req.body || {};
   if (!userId || !title) return res.status(400).json({ error: "userId and title are required" });
-  if (!users.find(u => u.id === userId)) return res.status(400).json({ error: "invalid userId" });
+  if (!users.get(userId)) return res.status(400).json({ error: "invalid userId" });
   const todo = { id: makeId(), userId, title, completed: !!completed };
-  todos.push(todo);
+  todos.set(todo.id, todo);
   res.status(201).json(todo);
 });
 
 app.get("/api/todos/:id", (req, res) => {
-  const todo = todos.find(t => t.id === req.params.id);
+  const todo = todos.get(req.params.id);
   if (!todo) return res.status(404).json({ error: "todo not found" });
   res.json(todo);
 });
 
 app.patch("/api/todos/:id", apiKeyRequired, (req, res) => {
-  const todo = todos.find(t => t.id === req.params.id);
+  const todo = todos.get(req.params.id);
   if (!todo) return res.status(404).json({ error: "todo not found" });
   const { title, completed, userId } = req.body || {};
   if (title !== undefined) todo.title = title;
   if (completed !== undefined) todo.completed = !!completed;
   if (userId !== undefined) {
-    if (!users.find(u => u.id === userId)) return res.status(400).json({ error: "invalid userId" });
+    if (!users.get(userId)) return res.status(400).json({ error: "invalid userId" });
     todo.userId = userId;
   }
   res.json(todo);
 });
 
 app.delete("/api/todos/:id", apiKeyRequired, (req, res) => {
-  const idx = todos.findIndex(t => t.id === req.params.id);
-  if (idx === -1) return res.status(404).json({ error: "todo not found" });
-  todos.splice(idx, 1);
+  const todo = todos.get(req.params.id);
+  if (!todo) return res.status(404).json({ error: "todo not found" });
+  todos.delete(req.params.id);
   res.json({ ok: true });
 });
 
