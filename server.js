@@ -30,11 +30,14 @@ const todos = new Map();
 ].forEach(t => todos.set(t.id, t));
 
 // --- Simple metrics middleware
+const RECENT_SIZE = 100;
 const metrics = {
   startedAt: new Date().toISOString(),
   totalRequests: 0,
   byRoute: {}, // routeKey -> { count, statuses: {200: n, ...}, totalMs }
-  recent: [], // last 100 requests
+  recent: new Array(RECENT_SIZE), // circular buffer of recent requests
+  recentIndex: 0,
+  recentCount: 0,
 };
 
 function routeKey(req) {
@@ -55,14 +58,16 @@ app.use((req, res, next) => {
     metrics.byRoute[key].totalMs += ms;
     metrics.byRoute[key].statuses[res.statusCode] = (metrics.byRoute[key].statuses[res.statusCode] || 0) + 1;
 
-    metrics.recent.push({
+    const entry = {
       ts: new Date().toISOString(),
       method: req.method,
       path: req.originalUrl,
       status: res.statusCode,
-      ms: Math.round(ms)
-    });
-    if (metrics.recent.length > 100) metrics.recent.shift();
+      ms: Math.round(ms),
+    };
+    metrics.recent[metrics.recentIndex] = entry;
+    metrics.recentIndex = (metrics.recentIndex + 1) % RECENT_SIZE;
+    if (metrics.recentCount < RECENT_SIZE) metrics.recentCount += 1;
   });
   next();
 });
@@ -187,12 +192,19 @@ app.get("/api/_stats", (_req, res) => {
     avgMs: v.count ? +(v.totalMs / v.count).toFixed(1) : 0,
     statuses: v.statuses,
   })).sort((a,b) => b.count - a.count);
+  const recent = [];
+  const count = Math.min(metrics.recentCount, RECENT_SIZE);
+  for (let i = 0; i < Math.min(20, count); i++) {
+    const idx = (metrics.recentIndex - 1 - i + RECENT_SIZE) % RECENT_SIZE;
+    const item = metrics.recent[idx];
+    if (item) recent.push(item);
+  }
   res.json({
     startedAt: metrics.startedAt,
     uptimeSec: Math.round(process.uptime()),
     totalRequests: metrics.totalRequests,
     routes: byRoute,
-    recent: metrics.recent.slice(-20).reverse(),
+    recent,
   });
 });
 
