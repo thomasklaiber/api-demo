@@ -4,6 +4,8 @@ Eine kleine Beispiel‑API zum **Üben von REST‑Basics** – mit Demo‑Datenm
 
 > Ziel: Einsteiger:innen sollen schnell Requests testen (GET/POST/PATCH/DELETE), typische Fehler verstehen und direkt ein Gefühl für eine API bekommen.
 
+**Live Demo:** https://api-demo-l4rk.onrender.com – inkl. Dashboard und [API‑Doku](https://api-demo-l4rk.onrender.com/docs).
+
 ---
 
 ## 1) Schnellstart
@@ -16,11 +18,12 @@ cd rest-api-demo
 npm install
 # optional: eigenen API-Key setzen, sonst Default
 API_KEY=my-secret npm start
-# öffne im Browser: http://localhost:3000/
+# öffne im Browser: https://api-demo-l4rk.onrender.com/
 ```
 
-- **Landing Page:** Übersicht & Links → `http://localhost:3000/`
-- **Dashboard:** Live‑Stats → `http://localhost:3000/dashboard` (pollt `/api/_stats` alle 2s)
+- **Landing Page:** Übersicht & Links → `https://api-demo-l4rk.onrender.com/`
+- **Dashboard:** Live‑Stats → `https://api-demo-l4rk.onrender.com/dashboard` (pollt `/api/_stats` alle 2s)
+- **Docs:** OpenAPI → `https://api-demo-l4rk.onrender.com/docs`
 
 **Standard‑Ports/Variablen**
 - `PORT` – Port der App (default: `3000`)
@@ -56,7 +59,7 @@ Beziehungen:
 
 **Beispiel:**
 ```bash
-curl -s -X POST http://localhost:3000/api/todos \
+curl -s -X POST https://api-demo-l4rk.onrender.com/api/todos \
   -H "X-API-Key: my-secret" \
   -H "Content-Type: application/json" \
   -d '{"userId":"1","title":"Secured task"}'
@@ -83,13 +86,13 @@ curl -s -X POST http://localhost:3000/api/todos \
 
 **Beispiel (lesen):**
 ```bash
-curl -s http://localhost:3000/api/users
-curl -s "http://localhost:3000/api/users?q=ali"
+curl -s https://api-demo-l4rk.onrender.com/api/users
+curl -s "https://api-demo-l4rk.onrender.com/api/users?q=ali"
 ```
 
 **Beispiel (anlegen):**
 ```bash
-curl -s -X POST http://localhost:3000/api/users \
+curl -s -X POST https://api-demo-l4rk.onrender.com/api/users \
   -H "X-API-Key: my-secret" \
   -H "Content-Type: application/json" \
   -d '{"name":"Charlie","email":"charlie@example.com"}'
@@ -105,15 +108,15 @@ curl -s -X POST http://localhost:3000/api/users \
 
 **Beispiele (lesen):**
 ```bash
-curl -s http://localhost:3000/api/todos
-curl -s "http://localhost:3000/api/todos?userId=1"
-curl -s "http://localhost:3000/api/todos?completed=true"
+curl -s https://api-demo-l4rk.onrender.com/api/todos
+curl -s "https://api-demo-l4rk.onrender.com/api/todos?userId=1"
+curl -s "https://api-demo-l4rk.onrender.com/api/todos?completed=true"
 ```
 
 **Beispiel (ändern):**
 ```bash
 # Todo 3 erledigt setzen
-curl -s -X PATCH http://localhost:3000/api/todos/3 \
+curl -s -X PATCH https://api-demo-l4rk.onrender.com/api/todos/3 \
   -H "X-API-Key: my-secret" \
   -H "Content-Type: application/json" \
   -d '{"completed": true}'
@@ -141,7 +144,7 @@ curl -s -X PATCH http://localhost:3000/api/todos/3 \
 
 ## 6) Mit Postman/Insomnia testen
 
-1. **Neue Collection** anlegen, Basis‑URL `http://localhost:3000` setzen.
+1. **Neue Collection** anlegen, Basis‑URL `https://api-demo-l4rk.onrender.com` setzen.
 2. **GET‑Requests** ohne Auth testen (z. B. `/api/users`).
 3. Für **POST/PATCH/DELETE** als Header hinzufügen:
    - `X-API-Key: my-secret` (oder `Authorization: ApiKey my-secret`)
@@ -204,6 +207,6 @@ rest-api-demo/
 
 ## OpenAPI / Swagger
 
-- **Spec:** `GET /openapi.json`
-- **UI:** `GET /docs` – interaktive Oberfläche zum Ausprobieren der Endpunkte (Swagger UI)
+- **Spec:** `GET https://api-demo-l4rk.onrender.com/openapi.json`
+- **UI:** `GET https://api-demo-l4rk.onrender.com/docs` – interaktive Oberfläche zum Ausprobieren der Endpunkte (Swagger UI)
 - **Tipp:** Für geschützte Endpunkte im **Authorize**‑Dialog `X-API-Key` setzen oder Header manuell ergänzen.

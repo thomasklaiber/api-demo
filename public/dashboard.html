@@ -31,7 +31,7 @@
       <h1>API Dashboard</h1>
       <div class="controls">
         <label for="api">API Base URL:</label>
-        <input id="api" type="text" placeholder="http://localhost:3000" />
+        <input id="api" type="text" placeholder="https://api-demo-l4rk.onrender.com" />
         <button id="apply">Verbinden</button>
         <label><input id="hideStats" type="checkbox" checked /> /stats ausblenden</label>
         <span id="status" class="small"></span>
@@ -65,11 +65,11 @@
 
       function getBaseUrl() {
         const p = new URLSearchParams(location.search);
-        return (p.get('api') || $('#api').value || 'http://localhost:3000').replace(/\/+$/,''); // trim trailing slash
+        return (p.get('api') || $('#api').value || 'https://api-demo-l4rk.onrender.com').replace(/\/+$/,''); // trim trailing slash
       }
 
       // UI state
-      $('#api').value = new URLSearchParams(location.search).get('api') || 'http://localhost:3000';
+      $('#api').value = new URLSearchParams(location.search).get('api') || 'https://api-demo-l4rk.onrender.com';
       let timer = null;
       let lastData = null;
       const routeChart = new Chart(
@@ -166,7 +166,7 @@
       }
 
       $('#apply').addEventListener('click', () => {
-        const api = $('#api').value || 'http://localhost:3000';
+        const api = $('#api').value || 'https://api-demo-l4rk.onrender.com';
         const url = new URL(location.href);
         url.searchParams.set('api', api);
         history.replaceState(null, '', url.toString());

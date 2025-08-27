@@ -228,14 +228,15 @@ app.get("/", (_req, res) => {
       <body>
         <main class="container">
           <h1>REST API Demo</h1>
-          <p>Example endpoints:</p>
+          <p>Beispiel‑API mit Users & Todos.</p>
           <ul>
             <li><a href="/api/health" target="_blank">GET /api/health</a></li>
             <li><a href="/api/users" target="_blank">GET /api/users</a></li>
             <li><a href="/api/todos" target="_blank">GET /api/todos</a></li>
             <li><a href="/dashboard" target="_blank">Dashboard</a></li>
           </ul>
-          <p>This app keeps data in memory. Restarting the server resets the data.</p>
+          <a class="btn" href="/docs" target="_blank">API Docs</a>
+          <p class="small">Daten werden nur im Speicher gehalten und beim Neustart zurückgesetzt.</p>
         </main>
       </body>
     </html>
@@ -248,7 +249,7 @@ app.get("/dashboard", (_req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`REST API Demo listening on http://localhost:${PORT}`);
+  console.log(`REST API Demo listening on port ${PORT}`);
 });
 
 
